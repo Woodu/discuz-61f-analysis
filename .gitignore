@@ -1,0 +1,16 @@
+# 敏感信息 - 不要上传
+../poketb.com/
+*.log
+*.db
+forumdata/
+*.session
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

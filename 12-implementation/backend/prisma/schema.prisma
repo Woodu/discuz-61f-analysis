@@ -1,0 +1,232 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户系统
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String   // Argon2id hash
+  groupId  Int      @default(2) // 默认普通会员
+
+  avatar    String?
+  bio       String?  @db.Text
+  location  String?
+  website   String?
+
+  credits   Int      @default(0) // 积分
+  extcredits1 Int @default(0) // 扩展积分1
+  extcredits2 Int @default(0) // 扩展积分2
+  extcredits3 Int @default(0) // 扩展积分3
+  extcredits4 Int @default(0) // 扩展积分4
+  extcredits5 Int @default(0) // 扩展积分5
+  extcredits6 Int @default(0) // 扩展积分6
+  extcredits7 Int @default(0) // 扩展积分7
+  extcredits8 Int @default(0) // 扩展积分8
+
+  posts     Int      @default(0) // 发帖数
+  threads   Int      @default(0) // 主题数
+
+  regDate   DateTime @default(now()) @map("reg_date")
+  lastVisit DateTime @default(now()) @map("last_visit")
+  lastPost  DateTime? @map("last_post")
+
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  isBanned  Boolean  @default(false) @map("is_banned")
+  banReason String?  @db.Text @map("ban_reason")
+  banUntil  DateTime? @map("ban_until")
+
+  mfaEnabled Boolean @default(false) @map("mfa_enabled")
+  mfaSecret  String? @map("mfa_secret") // TOTP secret
+  mfaBackupCodes String? @db.Text @map("mfa_backup_codes") // JSON array
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  group     UserGroup @relation(fields: [groupId], references: [id])
+  threads   Thread[]
+  posts     Post[]
+
+  @@map("users")
+  @@index([username])
+  @@index([email])
+  @@index([groupId])
+  @@index([regDate])
+}
+
+model UserGroup {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  title       String
+  color       String?
+
+  // 权限
+  canViewForum Boolean @default(true) @map("can_view_forum")
+  canPost     Boolean @default(false) @map("can_post")
+  canReply    Boolean @default(false) @map("can_reply")
+
+  creditsLower Int @default(0) @map("credits_lower")
+  creditsHigher Int @default(0) @map("credits_higher")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  users User[]
+
+  @@map("user_groups")
+}
+
+// 论坛核心
+model Forum {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?  @db.Text
+  icon        String?
+  categoryId  Int      @map("category_id")
+  order       Int      @default(0)
+
+  displayOrder Int     @map("display_order")
+
+  todayThreads Int     @default(0) @map("today_threads")
+  todayPosts   Int     @default(0) @map("today_posts")
+
+  threads     Int      @default(0)
+  posts       Int      @default(0)
+
+  allowPost   Boolean  @default(true) @map("allow_post")
+  allowReply  Boolean  @default(true) @map("allow_reply")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  category    ForumCategory @relation(fields: [categoryId], references: [id])
+  threads     Thread[]
+
+  @@map("forums")
+  @@index([categoryId])
+  @@index([order])
+}
+
+model ForumCategory {
+  id        Int     @id @default(autoincrement())
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关系
+  forums    Forum[]
+
+  @@map("forum_categories")
+  @@index([order])
+}
+
+model Thread {
+  id          Int      @id @default(autoincrement())
+  title       String
+  forumId     Int      @map("forum_id")
+  authorId    Int      @map("author_id")
+
+  content     String   @db.Text
+  isDigest    Boolean  @default(false) @map("is_digest")
+  isTop       Boolean  @default(false) @map("is_top")
+  isHighlight Boolean  @default(false) @map("is_highlight")
+  isLocked    Boolean  @default(false) @map("is_locked")
+
+  highlightColor String? @map("highlight_color")
+
+  views       Int      @default(0)
+  replies     Int      @default(0)
+
+  lastReplyAt DateTime? @map("last_reply_at")
+  lastReplyId Int?     @map("last_reply_id")
+
+  displayOrder Int     @default(0) @map("display_order")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  // 关系
+  forum       Forum    @relation(fields: [forumId], references: [id])
+  author      User     @relation(fields: [authorId], references: [id])
+  posts       Post[]
+  attachments  Attachment[]
+
+  @@map("threads")
+  @@index([forumId])
+  @@index([authorId])
+  @@index([isTop, displayOrder])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  threadId  Int      @map("thread_id")
+  authorId  Int      @map("author_id")
+  floor     Int      @default(1) // 楼层号
+
+  content   String   @db.Text
+
+  isAuthor  Boolean  @default(false) @map("is_author") // 是否楼主
+  isAnon    Boolean  @default(false) @map("is_anon") // 是否匿名
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // 关系
+  thread    Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author    User    @relation(fields: [authorId], references: [id])
+
+  @@map("posts")
+  @@index([threadId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model Attachment {
+  id         Int      @id @default(autoincrement())
+  threadId   Int?     @map("thread_id")
+  postId     Int?     @map("post_id")
+
+  filename   String
+  originalName String @map("original_name")
+  size       Int
+  mimeType  String   @map("mime_type")
+  url        String
+  thumbnailUrl String? @map("thumbnail_url")
+
+  width      Int?
+  height     Int?
+
+  downloads  Int      @default(0)
+  isPublic   Boolean  @default(true) @map("is_public")
+
+  uploadedBy Int      @map("uploaded_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // 关系
+  thread Thread? @relation(fields: [threadId], references: [id])
+  post   Post?   @relation(fields: [postId], references: [id])
+
+  @@map("attachments")
+  @@index([threadId])
+  @@index([postId])
+}
+
+// 更多模型将在后续实现...

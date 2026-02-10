@@ -179,12 +179,49 @@ bbs-migration-docs/
 ├── 06-plugins/               # 插件分析
 ├── 07-context/               # 上下文
 ├── 08-design/                # 设计文档
-├── 09-plugins-deep-dive/      # 插件深入分析 🆕
 │   ├── 01-tech-stack.md      # ✅ 技术栈
 │   ├── 02-ucenter-replacement.md # ✅ UCenter替换方案
 │   ├── 03-auth-design.md     # ✅ 认证系统设计 ✨
-│   ├── 04-data-model.md      # ⏳ 数据模型
-│   └── 05-api-design.md      # ⏳ API设计
+│   ├── 04-theme-design.md    # ✅ 主题系统设计
+│   ├── 05-data-model.md      # ✅ 数据模型设计 ✨
+│   ├── 06-api-design.md      # ✅ API设计 ✨
+│   ├── 06-frontend-architecture.md # ✅ 前端架构设计 ✨
+│   ├── 07-credits-system-design.md # ✅ 积分系统设计
+│   ├── 07-security-design.md # ✅ 安全系统设计 ✨
+│   ├── 08-notification-design.md # ✅ 通知系统设计
+│   ├── 09-pm-system-design.md # ✅ 站内信系统设计
 ├── 09-implementation/        # 实施计划
 └── 10-migration/             # 迁移脚本
 ```
+
+---
+
+## 实施代码规范 ⚠️ 重要
+
+所有新模块开发必须遵循项目开发规范：
+
+### 后端开发规范
+📄 **文档**: `D:\Dev\poketb-renew\backend\docs\development-standards.md`
+
+**核心要点**:
+- 认证必须使用 `authMiddleware`，不要自定义认证逻辑
+- 用户 ID 从 `ctx.state.user.userId` 获取（不是 `ctx.state.userId`）
+- 使用 ES6 `import` 而非 `require()`
+- 路由需在 `routes/index.ts` 中正确注册
+- 使用标准错误类型和响应格式
+
+### 前端开发规范
+📄 **文档**: `D:\Dev\poketb-renew\frontend\docs\development-standards.md`
+
+**核心要点**:
+- API 调用必须使用 `authApiClient`（不是原始 axios）
+- API 函数放在 `features/{feature}/api/` 目录
+- 创建对应的 React Query hooks
+- URL 参数作为字符串拼接（不是 axios 风格的 params）
+
+**检查清单**（新增模块必读）:
+- [ ] 后端: 使用 authMiddleware 包裹路由
+- [ ] 后端: 从 ctx.state.user.userId 获取用户ID
+- [ ] 前端: API 函数使用 authApiClient
+- [ ] 前端: 创建 React Query hooks
+- [ ] 前端: 正确配置 query invalidation
